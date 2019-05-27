@@ -57,7 +57,7 @@ if(args['monthStart'] === undefined) {
 	return false;
 }
 
-if(args['dayStart'] === undefined) {
+if(args['dayStart'] === undefined && args['wholeMonthStart'] === undefined) {
 	console.log('The day need to be a number. Please select a day with --dayStart, eg. --dayStart=06.\n\nSpecify --h to get some help');
 	return false;
 }
@@ -239,7 +239,8 @@ async function getRoutesData (page) {
 
 		await page.waitForSelector('select[name="months"]');
 		console.log('Return datepicker opened');
-  	
+  	await page.waitFor(400);
+
   	await setDatepicker(page, args['wholeMonthEnd'], args['dayEnd'], args['monthEnd'], args['yearEnd']);
   	console.log('Return datepicker updated');
   }
@@ -279,8 +280,8 @@ async function getRoutesData (page) {
   console.log('Wait for the results..');
 
   var detailPage = false;
-  await page.waitForSelector('.browse-list-category:nth-of-type(1)', {timeout: 10000}).then(() => (detailPage = false), (err) => console.log('No search results, looking for details'));
-	await page.waitForSelector('.day-list-item', {timeout: 5000}).then(() => (detailPage = true), (err) => console.log('No detail results'));
+  await page.waitForSelector('.browse-list-category:nth-of-type(1)', {timeout: 8000}).then(() => (detailPage = false), (err) => console.log('No search results, looking for details'));
+	await page.waitForSelector('.day-list-item', {timeout: 10000}).then(() => (detailPage = true), (err) => console.log('No detail results'));
 
   console.log('Results are loaded');
 
@@ -326,6 +327,7 @@ async function getRoutesData (page) {
 			console.log('Getting details from list...');
 			var detailResults = [];
 			for(let e in dataElements) {
+				if(e == 20) break;
 				await dataElements[e].click();
 				await page.waitForSelector('.browse-list-result');
 				var elementResult = await page.evaluate(() => {
@@ -333,6 +335,7 @@ async function getRoutesData (page) {
 					var resultList = document.querySelectorAll('.browse-list-result');
 
 					for(let i = 0; i < resultList.length; i++) {
+						if(i == 15) break;
 						results.push({
 							destination: resultList[i].querySelector('h3').innerText,
 							direct: resultList[i].querySelector('.browse-data-directness').innerText,
@@ -346,7 +349,7 @@ async function getRoutesData (page) {
 				});
 				detailResults.push(elementResult);
 
-				await page.waitFor(800);
+				await page.waitFor(400);
 				/*if(e == 3) break;
 				await dataElements[e].click();
 				console.log("aspetto l'apertura");
