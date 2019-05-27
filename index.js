@@ -1,5 +1,6 @@
 const puppeteer = require('puppeteer-extra');
 const pluginStealth = require("puppeteer-extra-plugin-stealth");
+const chalk = require('chalk');
 
 puppeteer.use(pluginStealth());
 
@@ -63,6 +64,7 @@ if(args['dayStart'] === undefined) {
 
 const defaultUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.157 Safari/537.36';
 
+/* da mettere in un file separato */
 async function inputClear(page, selector) {
   await page.evaluate(selector => {
     document.querySelector(selector).value = "";
@@ -88,6 +90,37 @@ async function setDatepicker(page, wholeMonth, day, month, year) {
 		await page.screenshot({path: 'screen/datepicker.png'});
 
 	}
+}
+
+async function getRoutesData (page) {
+	await page.waitForSelector('.day-list-item div article.result');
+	return await page.evaluate(() => {
+		var results = [];
+
+		var tickets = document.querySelectorAll('.day-list-item div article.result');
+		for(let i = 0; i < tickets.length; i++) {
+			var departureNodes = tickets[i].querySelectorAll('[class*="LegInfo__leg-depart"]');
+			var durationNodes = tickets[i].querySelectorAll('[class*="LegInfo__leg-stops-3lHev"]');
+			var arrivalNodes = tickets[i].querySelectorAll('[class*="LegInfo__leg-arrive"]');
+			var price = tickets[i].querySelector('.price').innerText;
+
+			var tempObj = {
+				routes: [],
+				price: price
+			};
+
+			for(let j = 0; j < departureNodes.length; j++) {
+				tempObj['routes'].push({
+					departure: departureNodes[j].innerText.replace(/\n/, ' '),
+					duration: durationNodes[j].innerText.replace(/\n/, ' '),
+					destination: arrivalNodes[j].innerText.replace(/\n/, ' ')
+				});
+			}
+			results.push(tempObj);
+		}
+
+		return JSON.stringify(results);
+	});
 }
 
 (async () => {
@@ -157,7 +190,7 @@ async function setDatepicker(page, wholeMonth, day, month, year) {
   	await page.type('.js-loginEmailInput', args['username']);
   	await page.type('#password', args['password']);
 
-		await page.click('[data-testid="login-button"]');	
+		await page.click('[data-testid="login-button"]');
 		console.log('Login succesfully');
   }
 
@@ -269,33 +302,8 @@ async function setDatepicker(page, wholeMonth, day, month, year) {
   if(errorOnSearch === false) {
 
   	if(detailPage == true) {
-  		var departure = await page.$$('.day-list-item article [class*="LegInfo__leg-depart"]'); // partenza
-			var duration = await page.$$('.day-list-item article [class*="LegInfo__leg-stops-3lHev"]'); // durata
-			var arrival = await page.$$('.day-list-item article [class*="LegInfo__leg-arrive"]'); // arrivo
-			var price = await page.$$('.day-list-item article .price');
-
-			var detailList = [];
-
-			for(let i in departure) {
-				let textContentDeparture = await departure[i].getProperty('textContent');
-				let textContentDuration = await duration[i].getProperty('textContent');
-				let textContentArrival = await arrival[i].getProperty('textContent');
-				let textContentPrice = await price[i].getProperty('textContent');
-
-				textContentDeparture = await textContentDeparture.jsonValue();
-				textContentDuration = await textContentDuration.jsonValue();
-				textContentArrival = await textContentArrival.jsonValue();
-				textContentPrice = await textContentPrice.jsonValue();
-
-				detailList.push({
-					departure: textContentDeparture.replace(/\n/, ' '),
-					duration: textContentDuration.replace(/\n/, ' '),
-					destination: textContentArrival.replace(/\n/, ' '),
-					price: textContentPrice.replace(/\n/, ' ')
-				});
-			}
+			var detailList = await getRoutesData(page);
 			console.log(detailList);
-
   	}else{
 			var countries = await page.$$('.browse-data-route h3');
 			var prices = await page.$$('.browse-data-route p');
@@ -310,8 +318,61 @@ async function setDatepicker(page, wholeMonth, day, month, year) {
 				textContentP = await textContentP.jsonValue();
 				countriesObj[textContentH3] = textContentP;
 			}
+			console.log(JSON.stringify(countriesObj));
+			// cliccare su tutti i box, con delay, e recuperare la città e il prezzo a partire da
+			// eventualmente cliccare su una città e recuperare i dati del dettaglio
 
-			console.log(countriesObj);
+			var dataElements = await page.$$('.browse-list-category');
+			console.log('Getting details from list...');
+			var detailResults = [];
+			for(let e in dataElements) {
+				await dataElements[e].click();
+				await page.waitForSelector('.browse-list-result');
+				var elementResult = await page.evaluate(() => {
+					var results = [];
+					var resultList = document.querySelectorAll('.browse-list-result');
+
+					for(let i = 0; i < resultList.length; i++) {
+						results.push({
+							destination: resultList[i].querySelector('h3').innerText,
+							direct: resultList[i].querySelector('.browse-data-directness').innerText,
+							price: resultList[i].querySelector('.flightLink').innerText,
+							url: resultList[i].querySelector('.flightLink').getAttribute('href')
+						});
+					}
+
+					document.querySelector('.result-list ul').removeChild(document.querySelector('.browse-list-category.open'));
+					return JSON.stringify(results);
+				});
+				detailResults.push(elementResult);
+
+				await page.waitFor(800);
+				/*if(e == 3) break;
+				await dataElements[e].click();
+				console.log("aspetto l'apertura");
+				await page.waitForSelector('.browse-list-category.open a.flightLink');
+
+				var linkElements = await page.$$('.browse-list-category.open a.flightLink');
+				for (let j in linkElements) {
+					if(j == 8) break;
+					console.log('clicco sul link');
+					await linkElements[j].click();
+					await page.waitForNavigation();
+
+					await page.screenshot({path: 'screen/submitted.png'});
+
+					var detailList = await getRoutesData(page);
+					console.log(detailList);
+					detailResults.push(detailList);
+
+					await page.waitFor(1000);
+					await page.goBack();
+				}*/
+				
+			}
+
+			console.log(detailResults);
+
   	}
   }
 
