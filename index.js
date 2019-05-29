@@ -34,7 +34,6 @@ if (args['monthEnd'] !== undefined) {
 utils.validateInputArguments(args);
 
 (async () => {
-	var timeStart = new Date().getTime();
 	const browser = await puppeteer.launch({
 		headless: (Object.keys(args).indexOf('debug') === -1),
 		// args: ['--deterministic-fetch'],
@@ -46,16 +45,16 @@ utils.validateInputArguments(args);
 
 	const page = await browser.newPage();
 	await page.setUserAgent(defaultUA);
-	//await page.setRequestInterception(true);
-
-	/*page.on('request', (req) => {
-			if(req.resourceType() == 'stylesheet' || req.resourceType() == 'font' || req.resourceType() == 'image'){
-					req.abort();
-			}
-			else {
-					req.continue();
-			}
-	});*/
+	
+	await page.setRequestInterception(true);
+	page.on('request', (req) => {
+		if (req.resourceType() == 'font' || req.resourceType() == 'image') {
+			req.abort();
+		}
+		else {
+			req.continue();
+		}
+	});
 	// await page.setJavaScriptEnabled(false);
 
 	console.log(chalk.yellow('Loading Skyscanner HP'));
@@ -182,22 +181,23 @@ utils.validateInputArguments(args);
 			() => (detailPage = false),
 			(err) => console.log('No search results, looking for details')
 		);
+		
+		var intermediatePage = false;
+		await page.waitForSelector('#day-flexible-days-section .fss-fxo-select button:last-child', {timeout: 200}).then(
+			() => (intermediatePage = true),
+			(err) => (console.log('...'))
+		);
+
+		if(intermediatePage == true) {
+			console.log('Is an intermediate page.. going in details');
+			await page.click('#day-flexible-days-section .fss-fxo-select button:last-child');
+			await page.waitForNavigation({waitUntil: 'networkidle2'});
+		}
 
 		await page.waitForSelector('.day-no-results-cushion', {timeout: 200}).then(
 			() => (console.log('No flight for these dates.')),
 			(err) => console.log('...')
 		);
-
-		var isMiddlePage = false;
-		await page.waitForSelector('#day-flexible-days-section .fss-fxo-select button:last-child', {timeout: 200}).then(
-			() => (isMiddlePage = true),
-			(err) => console.log('...')
-		);
-
-		if(isMiddlePage == true){
-			await page.click('#day-flexible-days-section .fss-fxo-select button:last-child)');
-			await page.waitForNavigation({waitUntil: 'networkidle2'});
-		}
 
 		// Flight list
 		await page.waitForSelector('.day-list-item', { timeout: 200 }).then(
