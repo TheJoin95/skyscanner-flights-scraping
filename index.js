@@ -1,13 +1,11 @@
-const puppeteer = require('puppeteer-extra');
-const pluginStealth = require("puppeteer-extra-plugin-stealth");
 const chalk = require('chalk');
-const utils = require('./utils/utils');
 
-puppeteer.use(pluginStealth());
+const utils = require('./utils/utils');
+const browserLauncher = require('./skyscanner/browser');
 
 const defaultUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.157 Safari/537.36';
 const rootPage = 'https://www.skyscanner.com';
-const args = {
+const defaultConfiguration = {
 	directOnly: true,
 	destination: 'Everywhere',
 	wholeMonthStart: false,
@@ -15,33 +13,17 @@ const args = {
 	oneWay: true
 };
 
-process.argv.slice(2).map(function (val) {
-	let splitted = val.split('=');
-	if (splitted[0].search('--') !== -1)
-		args[splitted[0].replace('--', '')] = splitted[1];
-}
-);
+const args = utils.getParameters(defaultConfiguration);
 
 if (Object.keys(args).indexOf('h') !== -1) {
 	utils.showHelp();
 	return false;
 }
 
-if (args['monthEnd'] !== undefined) {
-	args['oneWay'] = false;
-}
-
 utils.validateInputArguments(args);
 
 (async () => {
-	const browser = await puppeteer.launch({
-		headless: (Object.keys(args).indexOf('debug') === -1),
-		// args: ['--deterministic-fetch'],
-		defaultViewport: {
-			width: 1600,
-			height: 900
-		}
-	});
+	const browser = await browserLauncher.init(args);
 
 	const page = await browser.newPage();
 	await page.setUserAgent(defaultUA);
@@ -50,8 +32,7 @@ utils.validateInputArguments(args);
 	page.on('request', (req) => {
 		if (req.resourceType() == 'font' || req.resourceType() == 'image') {
 			req.abort();
-		}
-		else {
+		} else {
 			req.continue();
 		}
 	});
@@ -104,7 +85,7 @@ utils.validateInputArguments(args);
 
 	console.log(chalk.bgCyan('Opening departure datepicker'));
 	await page.click('#depart-fsc-datepicker-button');
-	await page.waitForSelector('select[name="months"]');
+	await page.waitForSelector('[class*="FlightDatepicker"]');
 	console.log(chalk.bgCyan('Departure datepicker opened'));
 
 	await page.waitFor(600);
@@ -116,7 +97,7 @@ utils.validateInputArguments(args);
 		console.log('Opening return datepicker');
 		await page.click('#return-fsc-datepicker-button');
 
-		await page.waitForSelector('select[name="months"]');
+		await page.waitForSelector('[class*="FlightDatepicker"]');
 		console.log('Return datepicker opened');
 		
 		await page.waitFor(600);
@@ -191,7 +172,7 @@ utils.validateInputArguments(args);
 		if(intermediatePage == true) {
 			console.log('Is an intermediate page.. going in details');
 			await page.click('#day-flexible-days-section .fss-fxo-select button:last-child');
-			await page.waitForNavigation({waitUntil: 'networkidle2'});
+			await page.waitForNavigation().catch((err) => console.log('Something wrong'));
 		}
 
 		await page.waitForSelector('.day-no-results-cushion', {timeout: 200}).then(
@@ -199,7 +180,16 @@ utils.validateInputArguments(args);
 			(err) => console.log('...')
 		);
 
+		var monthView = false; 
+		// nella monthView in realtà io dovrei dare la possibilità di selezionare le date e trovare i prezzi..
+		// Possibilità di usare Inquier.js ?
+		await page.waitForSelector('.month-view', {timeout: 200}).then(
+			() => (monthView = true),
+			(err) => console.log('No month view')
+		);
+
 		// Flight list
+		// more results => .day-list-container .bpk-button--secondary
 		await page.waitForSelector('.day-list-item', { timeout: 200 }).then(
 			() => (detailPage = true),
 			(err) => console.log('No detail results')
@@ -208,6 +198,28 @@ utils.validateInputArguments(args);
 		if (detailPage == true) {
 			var detailList = await utils.getRoutesData(page);
 			console.log(detailList);
+		}else if(monthView == true){
+			const calendarResult = await page.evaluate(() => {
+				var results = {
+					outbound: [],
+					inbound: []
+				};
+
+				for(let key in results) {
+					document.querySelectorAll('button[direction="' + key + '"]').forEach(function(item){
+						if(item.className.search(/(blocked)/) === -1){
+							let objToPush = {};
+							objToPush[item.innerText.split(/\n/)[0]] = item.innerText.split(/\n/)[1];
+							results[key].push(objToPush);
+						}
+					});
+				}
+
+				return results;
+			});
+
+			console.log(calendarResult);
+
 		} else {
 			var countries = await page.$$('.browse-data-route h3');
 			var prices = await page.$$('.browse-data-route p');

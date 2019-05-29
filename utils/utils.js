@@ -1,6 +1,20 @@
 const chalk = require('chalk');
 
 module.exports = {
+	getParameters: function(args) {		
+		process.argv.slice(2).map(function (val) {
+				let splitted = val.split('=');
+				if (splitted[0].search('--') !== -1)
+					args[splitted[0].replace('--', '')] = splitted[1];
+			}
+		);
+
+		if (args['monthEnd'] !== undefined) {
+			args['oneWay'] = false;
+		}
+
+		return args;
+	},
 	showHelp: function() {
 		var year = new Date().getFullYear();
 		var month = new Date().getMonth().toString().padStart(2, '0');
@@ -36,7 +50,7 @@ module.exports = {
 			valid = false;
 		}
 
-		if (args['dayStart'] === undefined && args['wholeMonthStart'] === undefined) {
+		if (args['dayStart'] === undefined && Object.keys(args).indexOf('wholeMonthStart') === 1) {
 			console.log(chalk.bgRed('The day need to be a number. Please select a day with --dayStart, eg. --dayStart=06.\n\n'));
 			valid = false;
 		}
@@ -101,8 +115,9 @@ module.exports = {
 	setDatepicker: async function (page, wholeMonth, day, month, year) {
 		if (wholeMonth !== false) {
 			await page.click('[class*="FlightDatepicker"] li:nth-of-type(2) button');
-			await page.click('button[class*="Monthselector_monthselector__month"]:nth-of-type(' + (parseInt(month) + 1) + ')');
-			console.log(chalk.blue("Selected the ${month} month"));
+			let monthNumberSelector = (parseInt(month) + 1) - new Date().getMonth();
+			await page.click('button[class*="Monthselector_monthselector__month"]:nth-of-type(' + monthNumberSelector + ')');
+			console.log(chalk.blue(`Selected the ${month} month`));
 		} else {
 			var year = year || new Date().getFullYear();
 			var month = month.padStart(2, '0') || new Date().getMonth().toString().padStart(2, '0');
@@ -113,9 +128,8 @@ module.exports = {
 			await page.evaluate(day => {
 				document.querySelectorAll('[class*="BpkCalendarDate_bpk-calendar-date"]:not([class*="BpkCalendarDate_bpk-calendar-date--outside"])')[(parseInt(day) - 1)].click(); // 16 Agosot
 			}, day);
-			await page.screenshot({ path: 'screen/datepicker.png' });
-
 		}
+		await page.screenshot({ path: 'screen/datepicker.png' });
 	},
 	getRoutesData: async function (page) {
 		await page.waitForSelector('.day-list-item div article.result');
