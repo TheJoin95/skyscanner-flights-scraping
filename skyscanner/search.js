@@ -1,5 +1,9 @@
-module.exports = {
-    setDatepicker: async function (page, wholeMonth, day, month, year) {
+require('./skyscanner');
+
+
+module.exports = class SkyscannerSearch extends Skyscanner {
+	constructor() { }
+	async setDatepicker(page, wholeMonth, day, month, year) {
 		if (wholeMonth !== false) {
 			await page.click('[class*="FlightDatepicker"] li:nth-of-type(2) button');
 			let monthNumberSelector = (parseInt(month) + 1) - new Date().getMonth();
@@ -17,5 +21,5 @@ module.exports = {
 			}, day);
 		}
 		await page.screenshot({ path: 'screen/datepicker.png' });
-	},
-};
+	};
+}
