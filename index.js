@@ -5,8 +5,7 @@ const Browser = require('./browser/browser');
 const SkyscannerScraper = require('./skyscanner/skyscanner');
 
 const defaultUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.157 Safari/537.36';
-const rootPage = 'https://www.skyscanner.com';
-const defaultConfiguration = {
+const defaultParametersConfiguration = {
 	directOnly: true,
 	destination: 'Everywhere',
 	wholeMonthStart: false,
@@ -14,7 +13,7 @@ const defaultConfiguration = {
 	oneWay: true
 };
 
-const args = utils.getParameters(defaultConfiguration);
+const args = utils.getParameters(defaultParametersConfiguration);
 
 if (Object.keys(args).indexOf('h') !== -1) {
 	utils.showHelp();
@@ -46,48 +45,32 @@ utils.validateInputArguments(args);
 
 	console.log(chalk.yellow("Is oneWay: " + chalk.underline.bold(args['oneWay'])));
 	if (args['oneWay'] === true)
-		await skyscannerScraperInstance.page.click('#fsc-trip-type-selector-one-way');
+		await skyscannerScraperInstance.setOneWay();
 
 	console.log(chalk.yellow("Is directOnly: " + chalk.underline.bold(args['directOnly'])));
 	if (args['directOnly'] === true)
-		await skyscannerScraperInstance.page.click('input[name="directOnly"]');
+		await skyscannerScraperInstance.setDirectOnly();
 
-	await skyscannerScraperInstance.page.click('#fsc-origin-search');
-	await skyscannerScraperInstance.page.waitFor(1000);
-
-	console.log(chalk.bgCyan('Compiling form data..'));
-	await skyscannerScraperInstance.page.type('#fsc-origin-search', args['origin'], { delay: 120 });
-	console.log(chalk.green(`Compiled origin airport: ${args['origin']}`));
-	await skyscannerScraperInstance.page.waitFor(600);
+	await skyscannerScraperInstance.setOriginAirport(args['origin']);
 
 	if (args['destination'] != 'Everywhere') {
-		await skyscannerScraperInstance.page.click('#fsc-destination-search');
-		await skyscannerScraperInstance.page.waitFor(600);
-
-		await skyscannerScraperInstance.page.type('#fsc-destination-search', args['destination'], { delay: 120 });
-		console.log(chalk.green(`Compiled destination airport: ${args['destination']}`));
+		await skyscannerScraperInstance.setDestinationAirport(args['destination']);
 	}
 
-	console.log(chalk.bgCyan('Opening departure datepicker'));
-	await skyscannerScraperInstance.page.click('#depart-fsc-datepicker-button');
-	await skyscannerScraperInstance.page.waitForSelector('[class*="FlightDatepicker"]');
-	console.log(chalk.bgCyan('Departure datepicker opened'));
-
-	await skyscannerScraperInstance.page.waitFor(600);
-	await utils.setDatepicker(skyscannerScraperInstance.page, args['wholeMonthStart'], args['dayStart'], args['monthStart'], args['yearStart']);
-	console.log(chalk.green('Departure datepicker updated'));
+	await skyscannerScraperInstance.setDepartureDate(
+		args['wholeMonthStart'],
+		args['dayStart'],
+		args['monthStart'],
+		args['yearStart']
+	);
 
 	if (args['oneWay'] !== true) {
-		await skyscannerScraperInstance.page.waitFor(600);
-		console.log('Opening return datepicker');
-		await skyscannerScraperInstance.page.click('#return-fsc-datepicker-button');
-
-		await skyscannerScraperInstance.page.waitForSelector('[class*="FlightDatepicker"]');
-		console.log('Return datepicker opened');
-		
-		await skyscannerScraperInstance.page.waitFor(600);
-		await utils.setDatepicker(skyscannerScraperInstance.page, args['wholeMonthEnd'], args['dayEnd'], args['monthEnd'], args['yearEnd']);
-		console.log(chalk.green('Return datepicker updated'));
+		await skyscannerScraperInstance.setReturnDate(
+			args['wholeMonthEnd'],
+			args['dayEnd'],
+			args['monthEnd'],
+			args['yearEnd']
+		);
 	}
 
 	if (args['adults'] !== undefined || args['children'] !== undefined) {
@@ -116,27 +99,18 @@ utils.validateInputArguments(args);
 		await skyscannerScraperInstance.page.click('[class*="BpkPopover_bpk-popover__footer"] button');
 	}
 
-	await skyscannerScraperInstance.page.screenshot({ path: 'screen/before-submit.png' });
-	await skyscannerScraperInstance.page.waitFor(1000);
-	console.log('Submit login form..');
-	await skyscannerScraperInstance.page.click('button[type="submit"]');
 
-
-	var errorOnSearch = false;
-	await skyscannerScraperInstance.page.waitForNavigation({waitUntil: 'networkidle2'}).then(
-		() => console.log(chalk.green('Searched succesfully')),
-		(err) => { errorOnSearch = true; console.log(chalk.bgRed('Error on submit')); }
-	);
+	await skyscannerScraperInstance.submitSearch();	
 
   /*
 	// in case of G recaptcha
 	await utils.clickOnRecaptcha(page);
 	*/
 
-	console.log(await skyscannerScraperInstance.page.url());
-	await skyscannerScraperInstance.page.screenshot({ path: 'screen/submitted.png' });
+	if(await skyscannerScraperInstance.loadResultPage()) {
+		console.log(await skyscannerScraperInstance.page.url());
+		await skyscannerScraperInstance.page.screenshot({ path: 'screen/submitted.png' });
 
-	if (errorOnSearch === false) {
 		console.log('Wait for the results..');
 		var detailPage = false;
 
