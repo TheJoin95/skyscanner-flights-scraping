@@ -4,16 +4,7 @@ const utils = require('./utils/utils');
 const Browser = require('./browser/browser');
 const SkyscannerScraper = require('./skyscanner/skyscanner');
 
-const defaultUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.157 Safari/537.36';
-const defaultParametersConfiguration = {
-	directOnly: true,
-	destination: 'Everywhere',
-	wholeMonthStart: false,
-	wholeMonthEnd: false,
-	oneWay: true
-};
-
-const args = utils.getParameters(defaultParametersConfiguration);
+const args = utils.getInputParameters();
 
 if (Object.keys(args).indexOf('h') !== -1) {
 	utils.showHelp();
@@ -30,7 +21,7 @@ utils.validateInputArguments(args);
 	skyscannerScraperInstance.attachBrowser(browser);
 	await skyscannerScraperInstance.init({
 		fakingUserInteraction: true,
-		ua: defaultUA, 
+		ua: args['ua'], 
 		'intercept-request': true
 	});
 	

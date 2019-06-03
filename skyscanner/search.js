@@ -1,8 +1,4 @@
-require('./skyscanner');
-
-
-module.exports = class SkyscannerSearch extends Skyscanner {
-	constructor() { }
+module.exports = class SkyscannerSearch {
 	async setDatepicker(page, wholeMonth, day, month, year) {
 		if (wholeMonth !== false) {
 			await page.click('[class*="FlightDatepicker"] li:nth-of-type(2) button');
@@ -20,6 +16,6 @@ module.exports = class SkyscannerSearch extends Skyscanner {
 				document.querySelectorAll('[class*="BpkCalendarDate_bpk-calendar-date"]:not([class*="BpkCalendarDate_bpk-calendar-date--outside"])')[(parseInt(day) - 1)].click(); // 16 Agosot
 			}, day);
 		}
-		await page.screenshot({ path: 'screen/datepicker.png' });
+		// await page.screenshot({ path: 'screen/datepicker.png' });
 	};
 }
