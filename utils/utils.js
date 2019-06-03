@@ -1,7 +1,16 @@
 const chalk = require('chalk');
 
 module.exports = {
-	getParameters: function(args) {		
+	getInputParameters: function() {
+		const args = {
+			ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.157 Safari/537.36',
+			directOnly: true,
+			destination: 'Everywhere',
+			wholeMonthStart: false,
+			wholeMonthEnd: false,
+			oneWay: true
+		};
+
 		process.argv.slice(2).map(function (val) {
 				let splitted = val.split('=');
 				if (splitted[0].search('--') !== -1)
@@ -129,7 +138,7 @@ module.exports = {
 				document.querySelectorAll('[class*="BpkCalendarDate_bpk-calendar-date"]:not([class*="BpkCalendarDate_bpk-calendar-date--outside"])')[(parseInt(day) - 1)].click(); // 16 Agosot
 			}, day);
 		}
-		await page.screenshot({ path: 'screen/datepicker.png' });
+		// await page.screenshot({ path: 'screen/datepicker.png' });
 	},
 	getRoutesData: async function (page) {
 		await page.waitForSelector('.day-list-item div article.result');

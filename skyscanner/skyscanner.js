@@ -12,12 +12,18 @@ module.exports = class SkyscannerScraper {
                 monthResult: '.month-view',
                 flightList: '.day-list-item'
             },
-            selectors: selectors
+            selectors: selectors,
+            enableScreenshot: false
         };
     }
 
     attachBrowser(browser) {
         this.browserInstance = browser;
+    }
+
+    async takeScreenshot(options) {
+        if(this.config.enableScreenshot === true)
+            await this.page.screenshot(options);
     }
 
     async init(options) {
@@ -47,6 +53,10 @@ module.exports = class SkyscannerScraper {
      */
     async setOneWay() {
         await this.page.click('#fsc-trip-type-selector-one-way');
+    }
+
+    async setReturnFlag() {
+        await this.page.click('#fsc-trip-type-selector-return');
     }
 
     async setDirectOnly() {
@@ -121,7 +131,7 @@ module.exports = class SkyscannerScraper {
     }
 
     async submitSearch() {        
-        await this.page.screenshot({ path: 'screen/before-submit.png' });
+        await this.takeScreenshot({ path: 'screen/before-submit.png' });
         await this.page.waitFor(1000);
         console.log('Submit login form..');
         await this.page.click('button[type="submit"]');
