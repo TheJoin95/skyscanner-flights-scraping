@@ -41,6 +41,10 @@ module.exports = class Browser {
         return page;
     }
 
+    async getPages() {
+        return await this.browserInstance.pages();
+    }
+
     async close() {
         this.browserInstance.close();
     }
