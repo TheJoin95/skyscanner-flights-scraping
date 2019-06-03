@@ -1,12 +1,19 @@
 const selectors = require('./elements');
 const utils = require('../utils/utils');
+const PageFactory = require('./page-parser/page-factory');
 
 module.exports = class SkyscannerScraper {
     constructor() {
         this.config = {
-            rootPage: 'https://www.skyscanner.com'
+            rootPage: 'https://www.skyscanner.com',
+            availablePageParser: {
+                destinationList: '.browse-list-category:nth-of-type(1)',
+                noFlightResult: '.day-no-results-cushion',
+                monthResult: '.month-view',
+                flightList: '.day-list-item'
+            },
+            selectors: selectors
         };
-        this.config.selectors = selectors;
     }
 
     attachBrowser(browser) {
@@ -85,6 +92,34 @@ module.exports = class SkyscannerScraper {
         await this.setSearchDate('return', wholeMonthEnd, dayEnd, monthEnd, yearEnd);
     }
 
+    async setPassengersData(adults, children) {
+        if (adults !== undefined || children !== undefined) {
+            adults = parseInt(adults);
+            children = parseInt(children);
+    
+            console.log('Opening passenger popover');
+            await this.page.click('[name="class-travellers-trigger"]'); // Apro popover num passeggeri
+            await this.page.waitForSelector('[class*="BpkPopover"]');
+            console.log('Passenger popover opened');
+    
+            if (adults > 0) {
+                console.log(`Adding ${adults} adults`);
+                for (var i = 0; i < adults - 1; i++) {
+                    await this.page.click('[class*="BpkPopover"] div [class*="CabinClassTravellersSelector_CabinClassTravellersSelector__nudger-wrapper"]:nth-of-type(1) button:nth-of-type(2)'); // default 1
+                };
+            }
+    
+            if (children > 0) {
+                console.log(`Adding ${children} children`);
+                for (var i = 0; i < children - 1; i++) {
+                    await this.page.click('[class*="BpkPopover"] div [class*="CabinClassTravellersSelector_CabinClassTravellersSelector__nudger-wrapper"]:nth-of-type(2) button:nth-of-type(2)'); // default 0
+                }
+            }
+    
+            await this.page.click('[class*="BpkPopover_bpk-popover__footer"] button');
+        }
+    }
+
     async submitSearch() {        
         await this.page.screenshot({ path: 'screen/before-submit.png' });
         await this.page.waitFor(1000);
@@ -102,5 +137,40 @@ module.exports = class SkyscannerScraper {
         );
 
         return loaded;
+    }
+
+    async isIntermediatePage() {
+        var intermediatePage = false;
+		await this.page.waitForSelector('#day-flexible-days-section .fss-fxo-select button:last-child', {timeout: 200}).then(
+			() => (intermediatePage = true),
+			(err) => (console.log('...'))
+		);
+
+		if(intermediatePage == true) {
+			console.log('Is an intermediate page.. going in details');
+			await this.page.click('#day-flexible-days-section .fss-fxo-select button:last-child');
+			await this.page.waitForNavigation().catch((err) => console.log('Something went wrong'));
+		}
+    }
+
+    async createPageParser() {
+        var isPageParsable = false;
+
+        await this.isIntermediatePage(); // if true, waitForNavigation..
+
+		// Flight list
+		// more results => .day-list-container .bpk-button--secondary
+        
+        for (let pageParser in this.config.availablePageParser) {
+            await this.page.waitForSelector(this.config.availablePageParser[pageParser], {
+                timeout: 100
+            }).then(
+                () => (isPageParsable = true),
+                (err) => console.log(`No ${pageParser} results`)
+            );
+
+            if(isPageParsable === true)
+                return PageFactory.createPageParser(pageParser);
+        }
     }
 }

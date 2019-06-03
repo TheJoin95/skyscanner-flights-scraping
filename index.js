@@ -73,160 +73,25 @@ utils.validateInputArguments(args);
 		);
 	}
 
-	if (args['adults'] !== undefined || args['children'] !== undefined) {
-		args['adults'] = parseInt(args['adults']);
-		args['children'] = parseInt(args['children']);
-
-		console.log('Opening passenger popover');
-		await skyscannerScraperInstance.page.click('[name="class-travellers-trigger"]'); // Apro popover num passeggeri
-		await skyscannerScraperInstance.page.waitForSelector('[class*="BpkPopover"]');
-		console.log('Passenger popover opened');
-
-		if (args['adults'] > 0) {
-			console.log(`Adding ${args['adults']} adults`);
-			for (var i = 0; i < args['adults'] - 1; i++) {
-				await skyscannerScraperInstance.page.click('[class*="BpkPopover"] div [class*="CabinClassTravellersSelector_CabinClassTravellersSelector__nudger-wrapper"]:nth-of-type(1) button:nth-of-type(2)'); // default 1
-			};
-		}
-
-		if (args['children'] > 0) {
-			console.log(`Adding ${args['children']} children`);
-			for (var i = 0; i < args['children'] - 1; i++) {
-				await skyscannerScraperInstance.page.click('[class*="BpkPopover"] div [class*="CabinClassTravellersSelector_CabinClassTravellersSelector__nudger-wrapper"]:nth-of-type(2) button:nth-of-type(2)'); // default 0
-			}
-		}
-
-		await skyscannerScraperInstance.page.click('[class*="BpkPopover_bpk-popover__footer"] button');
-	}
-
+	if(args['adults'] !== undefined || args['children'] !== undefined)
+		await skyscannerScraperInstance.setPassengersData(args['adults'], args['children']);
 
 	await skyscannerScraperInstance.submitSearch();	
 
-  /*
+  	/*
 	// in case of G recaptcha
 	await utils.clickOnRecaptcha(page);
 	*/
 
 	if(await skyscannerScraperInstance.loadResultPage()) {
 		console.log(await skyscannerScraperInstance.page.url());
-		await skyscannerScraperInstance.page.screenshot({ path: 'screen/submitted.png' });
+		// await skyscannerScraperInstance.page.screenshot({ path: 'screen/submitted.png' });
 
 		console.log('Wait for the results..');
-		var detailPage = false;
 
-		// Destination list
-		await skyscannerScraperInstance.page.waitForSelector('.browse-list-category:nth-of-type(1)', {
-			timeout: 200
-		}).then(
-			() => (detailPage = false),
-			(err) => console.log('No search results, looking for details')
-		);
-		
-		var intermediatePage = false;
-		await skyscannerScraperInstance.page.waitForSelector('#day-flexible-days-section .fss-fxo-select button:last-child', {timeout: 200}).then(
-			() => (intermediatePage = true),
-			(err) => (console.log('...'))
-		);
-
-		if(intermediatePage == true) {
-			console.log('Is an intermediate page.. going in details');
-			await skyscannerScraperInstance.page.click('#day-flexible-days-section .fss-fxo-select button:last-child');
-			await skyscannerScraperInstance.page.waitForNavigation().catch((err) => console.log('Something wrong'));
-		}
-
-		await skyscannerScraperInstance.page.waitForSelector('.day-no-results-cushion', {timeout: 200}).then(
-			() => (console.log('No flight for these dates.')),
-			(err) => console.log('...')
-		);
-
-		var monthView = false; 
-		// nella monthView in realtà io dovrei dare la possibilità di selezionare le date e trovare i prezzi..
-		// Possibilità di usare Inquier.js ?
-		await skyscannerScraperInstance.page.waitForSelector('.month-view', {timeout: 200}).then(
-			() => (monthView = true),
-			(err) => console.log('No month view')
-		);
-
-		// Flight list
-		// more results => .day-list-container .bpk-button--secondary
-		await skyscannerScraperInstance.page.waitForSelector('.day-list-item', { timeout: 200 }).then(
-			() => (detailPage = true),
-			(err) => console.log('No detail results')
-		);
-
-		if (detailPage == true) {
-			var detailList = await utils.getRoutesData(skyscannerScraperInstance.page);
-			console.log(detailList);
-		}else if(monthView == true){
-			const calendarResult = await skyscannerScraperInstance.page.evaluate(() => {
-				var results = {
-					outbound: [],
-					inbound: []
-				};
-
-				for(let key in results) {
-					document.querySelectorAll('button[direction="' + key + '"]').forEach(function(item){
-						if(item.className.search(/(blocked)/) === -1){
-							let objToPush = {};
-							objToPush[item.innerText.split(/\n/)[0]] = item.innerText.split(/\n/)[1];
-							results[key].push(objToPush);
-						}
-					});
-				}
-
-				return results;
-			});
-
-			console.log(calendarResult);
-
-		} else {
-			var countries = await skyscannerScraperInstance.page.$$('.browse-data-route h3');
-			var prices = await skyscannerScraperInstance.page.$$('.browse-data-route p');
-
-			var countriesObj = {};
-
-			for (let i in countries) {
-				let textContentH3 = await countries[i].getProperty('textContent');
-				let textContentP = await prices[i].getProperty('textContent');
-
-				textContentH3 = await textContentH3.jsonValue();
-				textContentP = await textContentP.jsonValue();
-				countriesObj[textContentH3] = textContentP;
-			}
-			console.log(JSON.stringify(countriesObj));
-
-			var dataElements = await skyscannerScraperInstance.page.$$('.browse-list-category');
-			console.log('Getting details from list...');
-
-			var detailResults = [];
-			for (let e in dataElements) {
-				if (e == 20) break;
-				await dataElements[e].click();
-				await skyscannerScraperInstance.page.waitForSelector('.browse-list-result');
-				var elementResult = await skyscannerScraperInstance.page.evaluate(() => {
-					var results = [];
-					var resultList = document.querySelectorAll('.browse-list-result');
-
-					for (let i = 0; i < resultList.length; i++) {
-						if (i == 15) break;
-						results.push({
-							destination: resultList[i].querySelector('h3').innerText,
-							direct: resultList[i].querySelector('.browse-data-directness').innerText,
-							price: resultList[i].querySelector('.flightLink').innerText,
-							url: resultList[i].querySelector('.flightLink').getAttribute('href')
-						});
-					}
-
-					document.querySelector('.result-list ul').removeChild(document.querySelector('.browse-list-category.open'));
-					return JSON.stringify(results);
-				});
-				detailResults.push(elementResult);
-
-				await skyscannerScraperInstance.page.waitFor(400);
-
-			}
-			console.log(detailResults);
-		}
+		var pageParser = await skyscannerScraperInstance.createPageParser();
+		var results = await pageParser.getData(skyscannerScraperInstance);
+		console.log(results);
 	}
 
 	console.log('Window close');
