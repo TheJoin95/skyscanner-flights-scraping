@@ -15,7 +15,7 @@ module.exports = class Browser {
             defaultViewport: {
                 width: 1600,
                 height: 900
-            }
+            },
         }).catch((err) => {throw Error(err)});
     }
 

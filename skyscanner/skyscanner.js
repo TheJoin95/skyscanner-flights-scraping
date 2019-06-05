@@ -45,6 +45,18 @@ module.exports = class SkyscannerScraper {
         this.setPage(0);*/
     }
 
+    async checkAndOpenSearchbar() {
+		var optimizedSearch = false;
+        await this.page.click('#flights-search-summary-toggle-search-button')
+            .then(
+                () => optimizedSearch = true,
+                (err) => console.log("no searchar available")
+            );
+
+		if(optimizedSearch == true)
+			await this.page.waitForSelector('#fsc-origin-search');
+    }
+
     /*setPage(index) {
         var index = index || 0;
         this.page = this.pages[index];

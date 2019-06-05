@@ -4,7 +4,7 @@ module.exports = class SkyscannerSearch {
 			await page.click('[class*="FlightDatepicker"] li:nth-of-type(2) button');
 			let monthNumberSelector = (parseInt(month) + 1) - new Date().getMonth();
 			await page.click('button[class*="Monthselector_monthselector__month"]:nth-of-type(' + monthNumberSelector + ')');
-			console.log(chalk.blue(`Selected the ${month} month`));
+			console.log(`Selected the ${month} month`);
 		} else {
 			var year = year || new Date().getFullYear();
 			var month = month.padStart(2, '0') || new Date().getMonth().toString().padStart(2, '0');

@@ -6,15 +6,16 @@ const SkyscannerScraper = require('./skyscanner/skyscanner');
 const express = require('express');
 const app = express();
 
-var browser, skyscannerScraperInstance = null;
+var browser, skyscannerWorkers = null;
 const args = utils.getInputParameters();
+const WORKERS = 5;
 
-(async () => {
+async function initBrowser () {
 	browser = new Browser(args);
 	await browser.init();
 
-	skyscannerScraperInstance = [];
-	for(let i = 0; i < 3; i++) {
+	skyscannerWorkers = [];
+	for(let i = 0; i < WORKERS; i++) {
 		let instance = new SkyscannerScraper();
 		instance.attachBrowser(browser);
 		await instance.init({
@@ -26,18 +27,50 @@ const args = utils.getInputParameters();
 		console.log(chalk.bgCyan('Faking user interaction..'));
 		await utils.fakingUserInteraction(instance.page);
 
-		skyscannerScraperInstance.push(instance);
+		skyscannerWorkers.push(instance);
 	}
-})();
+};
 
 app.get('/', async function (req, res) {
 
-	try {
-		var scraperInstance = null;
+	var args = {
+		oneWay: false,
+		wholeMonthStart: false,
+		dayStart: (new Date().getDay()+1),
+		monthStart: (new Date().getMonth()+1),
+		yearStart: (new Date().getFullYear()),
+		wholeMonthEnd: false,
+		dayEnd: (new Date().getDay()+1),
+		monthEnd: (new Date().getMonth()+1),
+		yearEnd: (new Date().getFullYear())
+	};
 
-		for(let i = 0; i < 3; i++) {
-			if(skyscannerScraperInstance[i].isWorking() === false){
-				scraperInstance = skyscannerScraperInstance[i];
+	args.oneWay = req.query.oneWay || args.oneWay;
+	args.directOnly = req.query.directOnly || args.directOnly;
+	args.origin = req.query.origin || args.origin;
+	args.destination = req.query.destination || args.destination;
+	args.wholeMonthStart = req.query.wholeMonthStart || args.wholeMonthStart;
+	args.dayStart = req.query.dayStart || args.dayStart;
+	args.monthStart = req.query.monthStart || args.monthStart;
+	args.yearStart = req.query.yearStart || args.yearStart;
+	args.wholeMonthEnd = req.query.wholeMonthEnd || args.wholeMonthEnd;
+	args.dayEnd = req.query.dayEnd || args.dayEnd;
+	args.monthEnd = req.query.monthEnd || args.monthEnd;
+	args.yearEnd = req.query.yearEnd || args.yearEnd;
+
+	if(args.origin === undefined || args.origin.trim() == '' || args.destination === undefined || args.destination.trim() === '') {
+		res.status(400);
+		res.send('You need to specify the origin airport and the destination airport');
+		return false;
+	}
+
+	var scraperInstance = null;
+	var workerIndex = 0;
+	try {
+		for(let i = 0; i < WORKERS; i++) {
+			if(skyscannerWorkers[i].isWorking() === false){
+				workerIndex = i;
+				scraperInstance = skyscannerWorkers[i];
 				scraperInstance.toggleWorking();
 				break;
 			}
@@ -46,32 +79,11 @@ app.get('/', async function (req, res) {
 		if(scraperInstance == null) {
 			res.status(401);
 			res.send('No more worker. Wait 30s and retry');
+			return false;
 		}
-		
-		// questi sono parametri POST|GET
-		var args = {
-			oneWay: false,
-			directOnly: false,
-			origin: 'PSA',
-			destination: 'Amsterdam',
-			wholeMonthStart: false,
-			dayStart: 19,
-			monthStart: 8,
-			yearStart: 2019,
-			wholeMonthEnd: false,
-			dayEnd: 29,
-			monthEnd: 8,
-			yearEnd: 2019
-		};
 
-		var optimizedSearch = false;
-		await scraperInstance.page.click('#flights-search-summary-toggle-search-button').then(() => optimizedSearch = true, (err) => console.log("nope"));
-
-		if(optimizedSearch == true)
-			await scraperInstance.page.waitForSelector('#fsc-origin-search');
-
-
-		await scraperInstance.page.screenshot({ path: 'screen/test.png' });
+		await scraperInstance.checkAndOpenSearchbar();
+		// await scraperInstance.page.screenshot({ path: 'screen/test.png' });
 
 		console.log(chalk.yellow("Is oneWay: " + chalk.underline.bold(args['oneWay'])));
 		if (args['oneWay'] === true)
@@ -94,7 +106,7 @@ app.get('/', async function (req, res) {
 			args['yearStart']
 		);
 
-		await scraperInstance.page.screenshot({ path: 'screen/test-1.png' });
+		// await scraperInstance.page.screenshot({ path: 'screen/test-1.png' });
 
 		if (args['oneWay'] !== true) {
 			await scraperInstance.setReturnDate(
@@ -115,18 +127,17 @@ app.get('/', async function (req, res) {
 
 		if(await scraperInstance.loadResultPage()) {
 			console.log(await scraperInstance.page.url());
-			// await scraperInstance.page.screenshot({ path: 'screen/submitted.png' });
-
 			console.log('Wait for the results..');
 
 			var pageParser = await scraperInstance.createPageParser();
 			var results = await pageParser.getData(scraperInstance);
 			console.log(results);
 		}
+
 		scraperInstance.toggleWorking();
 		res.send(results);
 	} catch (error) {
-		scraperInstance.init({
+		skyscannerWorkers[workerIndex].init({
 			ua: args['ua'], 
 			'intercept-request': true
 		});
@@ -134,6 +145,8 @@ app.get('/', async function (req, res) {
 	}
 });
 
-app.listen(3000, function () {
-  console.log('listening on port 3000!');
+app.listen(3000, async function () {
+	console.log('listening on port 3000!');
+	await initBrowser();
+	console.log('browser ready');
 });
