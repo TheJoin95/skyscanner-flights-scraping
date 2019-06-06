@@ -15,7 +15,7 @@ module.exports = class Browser {
             defaultViewport: {
                 width: 1600,
                 height: 900
-            }
+            },
         }).catch((err) => {throw Error(err)});
     }
 
@@ -39,6 +39,10 @@ module.exports = class Browser {
         await page.goto(url);
 
         return page;
+    }
+
+    async getPages() {
+        return await this.browserInstance.pages();
     }
 
     async close() {

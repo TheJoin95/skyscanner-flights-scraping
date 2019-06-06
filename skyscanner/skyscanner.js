@@ -26,16 +26,75 @@ module.exports = class SkyscannerScraper {
             await this.page.screenshot(options);
     }
 
+    isWorking() {
+        return this.working;
+    }
+
+    toggleWorking() {
+        this.working = !this.working;
+    }
+
     async init(options) {
         // instanziare pagine personalizzate, es. Homepage extends Page, DetailPage extends Page etc..
         this.page = await this.browserInstance.initPage(this.config.rootPage, options);
+        this.working = false;
+        /*this.pages = [];
+        for(let i = 0; i < options.pages; i++)
+            this.pages.push(await this.browserInstance.initPage(this.config.rootPage, options));
+        
+        this.setPage(0);*/
     }
+
+    async checkAndOpenSearchbar() {
+		var optimizedSearch = false;
+        await this.page.click('#flights-search-summary-toggle-search-button')
+            .then(
+                () => optimizedSearch = true,
+                (err) => console.log("no searchar available")
+            );
+
+		if(optimizedSearch == true)
+			await this.page.waitForSelector('#fsc-origin-search');
+    }
+
+    /*setPage(index) {
+        var index = index || 0;
+        this.page = this.pages[index];
+    }
+
+    getAvailablePage() {
+        let page = null;
+
+        this.workingPage = this.workingPage || [];
+        // this.workingPage.sort((a, b) => a - b); // num, asc
+
+        for(let i = 0; i < this.pages.length; i ++) {
+            if(this.workingPage.indexOf(i) === -1) {
+                page = i;
+                break;
+            }
+        }
+
+        return page;
+    }
+
+    toggleWorkingPage(index) {
+        if(this.workingPage === undefined)
+            this.workingPage = [];
+
+        let toggleIndex = this.workingPage.indexOf(index);
+        if(toggleIndex === -1)
+            this.workingPage.push(index);
+        else
+            this.workingPage.splice(toggleIndex, 1);
+        
+    }*/
 
     async signIn(username, password) {
         console.log('Initating Log in');
         try {
             await this.page.click('#login-button-nav-item button');
-            await this.page.waitFor(400);
+            // await this.page.waitFor(400);
             await this.page.click('[data-testid="login-email-button"]');
 
             await this.page.type('.js-loginEmailInput', username);
@@ -65,17 +124,17 @@ module.exports = class SkyscannerScraper {
 
     async setOriginAirport(airport) {
         await this.page.click('#fsc-origin-search');
-        await this.page.waitFor(1000);
+        // await this.page.waitFor(1000);
 
         console.log('Compiling form data..');
         await this.page.type('#fsc-origin-search', airport, { delay: 120 });
         console.log(`Compiled origin airport: ${airport}`);
-        await this.page.waitFor(600);
+        // await this.page.waitFor(600);
     }
 
     async setDestinationAirport(airport) {
         await this.page.click('#fsc-destination-search');
-		await this.page.waitFor(600);
+		// await this.page.waitFor(600);
 
 		await this.page.type('#fsc-destination-search', airport, { delay: 120 });
 		console.log(`Compiled destination airport: ${airport}`);
@@ -89,7 +148,7 @@ module.exports = class SkyscannerScraper {
         await this.page.waitForSelector('[class*="FlightDatepicker"]');
         console.log('Departure datepicker opened');
     
-        await this.page.waitFor(600);
+        // await this.page.waitFor(600);
         await utils.setDatepicker(this.page, wholeMonth, day, month, year);
         console.log(type + ' datepicker updated');
     }
@@ -132,7 +191,7 @@ module.exports = class SkyscannerScraper {
 
     async submitSearch() {        
         await this.takeScreenshot({ path: 'screen/before-submit.png' });
-        await this.page.waitFor(1000);
+        // await this.page.waitFor(1000);
         console.log('Submit login form..');
         await this.page.click('button[type="submit"]');
 
@@ -173,7 +232,7 @@ module.exports = class SkyscannerScraper {
         
         for (let pageParser in this.config.availablePageParser) {
             await this.page.waitForSelector(this.config.availablePageParser[pageParser], {
-                timeout: 100
+                timeout: 200
             }).then(
                 () => (isPageParsable = true),
                 (err) => console.log(`No ${pageParser} results`)
