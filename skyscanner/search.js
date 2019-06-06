@@ -7,7 +7,7 @@ module.exports = class SkyscannerSearch {
 			console.log(`Selected the ${month} month`);
 		} else {
 			var year = year || new Date().getFullYear();
-			var month = month.padStart(2, '0') || new Date().getMonth().toString().padStart(2, '0');
+			var month = month.toString().padStart(2, '0') || new Date().getMonth().toString().padStart(2, '0');
 
 			if (year != new Date().getFullYear() || month != new Date().getMonth().toString().padStart(2, '0'))
 				await page.select('select[name="months"]', `${year}-${month}`);

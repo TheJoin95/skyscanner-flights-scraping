@@ -232,7 +232,7 @@ module.exports = class SkyscannerScraper {
         
         for (let pageParser in this.config.availablePageParser) {
             await this.page.waitForSelector(this.config.availablePageParser[pageParser], {
-                timeout: 200
+                timeout: 400
             }).then(
                 () => (isPageParsable = true),
                 (err) => console.log(`No ${pageParser} results`)
