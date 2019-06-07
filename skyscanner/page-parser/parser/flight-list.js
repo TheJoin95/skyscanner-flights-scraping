@@ -1,4 +1,4 @@
-const elements = require('../../elements');
+const elements = require('../../elements')['flightList'];
 
 module.exports = class FlightList {
     constructor() {
@@ -6,16 +6,16 @@ module.exports = class FlightList {
     }
 
     async getData(scraperInstance) {
-        await scraperInstance.page.waitForSelector('.day-list-item div article.result');
-		return await scraperInstance.page.evaluate(() => {
+        await scraperInstance.page.waitForSelector(elements.results);
+		return await scraperInstance.page.evaluate((selectors) => {
 			var results = [];
 
-			var tickets = document.querySelectorAll('.day-list-item div article.result');
+			var tickets = document.querySelectorAll(selectors.results);
 			for (let i = 0; i < tickets.length; i++) {
-				var departureNodes = tickets[i].querySelectorAll('[class*="LegInfo__leg-depart"]');
-				var durationNodes = tickets[i].querySelectorAll('[class*="LegInfo__leg-stops-3lHev"]');
-				var arrivalNodes = tickets[i].querySelectorAll('[class*="LegInfo__leg-arrive"]');
-				var price = tickets[i].querySelector('.price').innerText;
+				var departureNodes = tickets[i].querySelectorAll(selectors.depart);
+				var durationNodes = tickets[i].querySelectorAll(selectors.duration);
+				var arrivalNodes = tickets[i].querySelectorAll(selectors.destination);
+				var price = tickets[i].querySelector(selectors.price).innerText;
 
 				var tempObj = {
 					routes: [],
@@ -33,7 +33,7 @@ module.exports = class FlightList {
 			}
 
 			return JSON.stringify(results);
-		});
+		}, elements);
     }
 
 }

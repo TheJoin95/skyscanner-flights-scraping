@@ -1,5 +1,3 @@
-const elements = require('../../elements');
-
 module.exports = class MonthResult {
     constructor() {
         this.config = {};

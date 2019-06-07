@@ -7,34 +7,34 @@ const inquirer = require('inquirer');
 /*language
 currency*/
 
-var questions = [
+const questions = [
 	{
-	  type: 'confirm',
-	  name: 'directOnly',
-	  message: 'Direct flights only?',
-	  default: false
+		type: 'confirm',
+		name: 'directOnly',
+		message: 'Direct flights only?',
+		default: false
 	},
 	{
-	  type: 'confirm',
-	  name: 'oneWay',
-	  message: "Is a one way trip?",
-	  default: false
+		type: 'confirm',
+		name: 'oneWay',
+		message: "Is a one way trip?",
+		default: false
 	},
 	{
-	  type: 'input',
-	  name: 'origin',
-	  message: 'Type a city/airport/IATA code of depart',
-	  validate: function(value) {
-		  let valid = (value !== '' && value !== undefined);
-		  return valid || 'Please type a city/airport/IATA Code';
-	  }
+		type: 'input',
+		name: 'origin',
+		message: 'Type a city/airport/IATA code of depart:',
+		validate: function (value) {
+			let valid = (value !== '' && value !== undefined);
+			return valid || 'Please type a city/airport/IATA Code';
+		}
 	},
 	{
 		type: 'input',
 		name: 'destination',
-		message: 'Type a city/airport/IATA code of destination',
+		message: 'Type a city/airport/IATA code of destination:',
 		default: 'Everywhere',
-		validate: function(value) {
+		validate: function (value) {
 			let valid = (value !== '' && value !== undefined);
 			return valid || 'Please type a city/airport/IATA Code';
 		}
@@ -43,75 +43,78 @@ var questions = [
 	{
 		type: 'input',
 		name: 'yearStart',
-		message: 'If different, type the depart year',
-		default: 2019
-	  },
-	  {
-		  type: 'list',
-		  name: 'monthStart',
-		  message: 'Select a month of depart',
-		  choices: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-		},
+		message: 'If different, type the depart year:',
+		default: new Date().getFullYear()
+	},
+	{
+		type: 'list',
+		name: 'monthStart',
+		message: 'Select a month of depart:',
+		choices: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+	},
 	{
 		type: 'confirm',
 		name: 'wholeMonthStart',
 		message: 'Would you like to list the prices for the whole month?',
 		default: false
-	  },
+	},
 	{
 		type: 'input',
 		name: 'dayStart',
-		message: 'Type a day of depart',
-		validate: function(value) {
-		  var valid = !isNaN(parseInt(value));
-		  return valid || 'Please enter a number';
+		message: 'Type a day of depart:',
+		validate: function (value) {
+			var valid = !isNaN(parseInt(value));
+			return valid || 'Please enter a number';
 		},
-		when: function(answers) {
+		when: function (answers) {
 			return answers.wholeMonthStart === false;
 		},
 		filter: Number
-	  },
-	  {
-		  type: 'input',
-		  name: 'yearEnd',
-		  message: 'If different, type the return year',
-		  default: 2019,
-		  when: function(answers) {
-			  return answers.oneWay === false;
-		  }
+	},
+	{
+		type: 'input',
+		name: 'yearEnd',
+		message: 'If different, type the return year:',
+		default: new Date().getFullYear(),
+		when: function (answers) {
+			return answers.oneWay === false;
+		}
+	},
+	{
+		type: 'list',
+		name: 'monthEnd',
+		message: 'Select a month of return:',
+		choices: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+		default: function (answers) {
+			return answers.monthStart;
 		},
-		{
-			type: 'list',
-			name: 'monthEnd',
-			message: 'Select a month of return',
-			choices: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-			when: function(answers) {
-				return answers.oneWay === false;
-			}
-		  },
-	  {
-		  type: 'confirm',
-		  name: 'wholeMonthEnd',
-		  message: 'Would you like to list the prices for the whole month?',
-		  default: false,
-		  when: function(answers) {
-			  return answers.wholeMonthStart === true && answers.oneWay === false;
-		  }
-		},
-	  {
-		  type: 'input',
-		  name: 'dayEnd',
-		  message: 'Type a day of return',
-		  validate: function(value) {
+		when: function (answers) {
+			return answers.oneWay === false;
+		}
+	},
+	{
+		type: 'confirm',
+		name: 'wholeMonthEnd',
+		message: 'Would you like to list the prices for the whole month?',
+		default: false,
+		when: function (answers) {
+			return answers.wholeMonthStart === true && answers.oneWay === false;
+		}
+	},
+	{
+		type: 'input',
+		name: 'dayEnd',
+		message: 'Type a day of return:',
+		validate: function (value) {
 			var valid = !isNaN(parseInt(value));
 			return valid || 'Please enter a number';
-		  },
-		  when: function(answers) {
-			  return answers.oneWay === false && answers.wholeMonthStart === false;
-		  },
-		  filter: Number
-		}
-  ];
+		},
+		when: function (answers) {
+			return answers.oneWay === false && answers.wholeMonthStart === false;
+		},
+		filter: Number
+	}
+];
   
 var args = null;
 inquirer.prompt(questions).then(answers => {
@@ -119,10 +122,6 @@ inquirer.prompt(questions).then(answers => {
 	args = answers;
 	args['ua'] = defaultArgs['ua'];
 	args['wholeMonthEnd'] = args['wholeMonthEnd'] || false;
-
-	console.log(args);
-
-	// const args = utils.getInputParameters();
 
 	if (Object.keys(args).indexOf('h') !== -1) {
 		utils.showHelp();
@@ -194,8 +193,6 @@ inquirer.prompt(questions).then(answers => {
 
 		if(await skyscannerScraperInstance.loadResultPage()) {
 			console.log(await skyscannerScraperInstance.page.url());
-			// await skyscannerScraperInstance.page.screenshot({ path: 'screen/submitted.png' });
-
 			console.log('Wait for the results..');
 
 			var pageParser = await skyscannerScraperInstance.createPageParser();
