@@ -93,14 +93,13 @@ module.exports = class SkyscannerScraper {
     async signIn(username, password) {
         console.log('Initating Log in');
         try {
-            await this.page.click('#login-button-nav-item button');
-            // await this.page.waitFor(400);
-            await this.page.click('[data-testid="login-email-button"]');
+            await this.page.click(this.config.selectors.login.signInButton);
+            await this.page.click(this.config.selectors.login.focusableEmailElement);
 
-            await this.page.type('.js-loginEmailInput', username);
-            await this.page.type('#password', password);
+            await this.page.type(this.config.selectors.login.emailElement, username);
+            await this.page.type(this.config.selectors.login.passwordElement, password);
 
-            await this.page.click('[data-testid="login-button"]');
+            await this.page.click(this.config.selectors.login.signinSubmitButton);
             console.log('Login succesfully');
         }catch(e) {
             throw Error('Login failed');
@@ -111,32 +110,30 @@ module.exports = class SkyscannerScraper {
      * da mettere in classe searchPage che estende questa, forse?
      */
     async setOneWay() {
-        await this.page.click('#fsc-trip-type-selector-one-way');
+        await this.page.click(this.config.selectors.searchOptions.oneWayButton);
     }
 
     async setReturnFlag() {
-        await this.page.click('#fsc-trip-type-selector-return');
+        await this.page.click(this.config.selectors.searchOptions.returnButton);
     }
 
     async setDirectOnly() {
-        await this.page.click('input[name="directOnly"]');
+        await this.page.click(this.config.selectors.searchOptions.directOnlyButton);
     }
 
     async setOriginAirport(airport) {
-        await this.page.click('#fsc-origin-search');
-        // await this.page.waitFor(1000);
+        await this.page.click(this.config.selectors.searchOptions.originAirport);
 
         console.log('Compiling form data..');
-        await this.page.type('#fsc-origin-search', airport, { delay: 120 });
+        await this.page.type(this.config.selectors.searchOptions.originAirport, airport, { delay: 120 });
         console.log(`Compiled origin airport: ${airport}`);
-        // await this.page.waitFor(600);
     }
 
     async setDestinationAirport(airport) {
-        await this.page.click('#fsc-destination-search');
+        await this.page.click(this.config.selectors.searchOptions.destinationAirport);
 		// await this.page.waitFor(600);
 
-		await this.page.type('#fsc-destination-search', airport, { delay: 120 });
+		await this.page.type(this.config.selectors.searchOptions.destinationAirport, airport, { delay: 120 });
 		console.log(`Compiled destination airport: ${airport}`);
     }
 
@@ -145,7 +142,7 @@ module.exports = class SkyscannerScraper {
 
         console.log('Opening departure datepicker');
         await this.page.click('#' + type + '-fsc-datepicker-button');
-        await this.page.waitForSelector('[class*="FlightDatepicker"]');
+        await this.page.waitForSelector(this.config.selectors.datePicker.flightPicker);
         console.log('Departure datepicker opened');
     
         // await this.page.waitFor(600);
@@ -167,25 +164,25 @@ module.exports = class SkyscannerScraper {
             children = parseInt(children);
     
             console.log('Opening passenger popover');
-            await this.page.click('[name="class-travellers-trigger"]'); // Apro popover num passeggeri
-            await this.page.waitForSelector('[class*="BpkPopover"]');
+            await this.page.click(this.config.selectors.passengerOptions.popupButton);
+            await this.page.waitForSelector(this.config.selectors.passengerOptions.popup);
             console.log('Passenger popover opened');
     
             if (adults > 0) {
                 console.log(`Adding ${adults} adults`);
                 for (var i = 0; i < adults - 1; i++) {
-                    await this.page.click('[class*="BpkPopover"] div [class*="CabinClassTravellersSelector_CabinClassTravellersSelector__nudger-wrapper"]:nth-of-type(1) button:nth-of-type(2)'); // default 1
+                    await this.page.click(this.config.selectors.passengerOptions.adultButton); // default 1
                 };
             }
     
             if (children > 0) {
                 console.log(`Adding ${children} children`);
                 for (var i = 0; i < children - 1; i++) {
-                    await this.page.click('[class*="BpkPopover"] div [class*="CabinClassTravellersSelector_CabinClassTravellersSelector__nudger-wrapper"]:nth-of-type(2) button:nth-of-type(2)'); // default 0
+                    await this.page.click(this.config.selectors.passengerOptions.childrenButton); // default 0
                 }
             }
     
-            await this.page.click('[class*="BpkPopover_bpk-popover__footer"] button');
+            await this.page.click(this.config.selectors.passengerOptions.passengerSubmitButton);
         }
     }
 
@@ -193,7 +190,7 @@ module.exports = class SkyscannerScraper {
         await this.takeScreenshot({ path: 'screen/before-submit.png' });
         // await this.page.waitFor(1000);
         console.log('Submit login form..');
-        await this.page.click('button[type="submit"]');
+        await this.page.click(this.config.selectors.common.searchSubmit);
 
     }
 
@@ -210,14 +207,14 @@ module.exports = class SkyscannerScraper {
 
     async isIntermediatePage() {
         var intermediatePage = false;
-		await this.page.waitForSelector('#day-flexible-days-section .fss-fxo-select button:last-child', {timeout: 200}).then(
+		await this.page.waitForSelector(this.config.selectors.common.flexibleDate, {timeout: 200}).then(
 			() => (intermediatePage = true),
 			(err) => (console.log('...'))
 		);
 
 		if(intermediatePage == true) {
 			console.log('Is an intermediate page.. going in details');
-			await this.page.click('#day-flexible-days-section .fss-fxo-select button:last-child');
+			await this.page.click(this.config.selectors.common.flexibleDate);
 			await this.page.waitForNavigation().catch((err) => console.log('Something went wrong'));
 		}
     }

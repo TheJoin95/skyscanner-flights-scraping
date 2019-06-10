@@ -135,10 +135,9 @@ module.exports = {
 				await page.select('select[name="months"]', `${year}-${month}`);
 
 			await page.evaluate(day => {
-				document.querySelectorAll('[class*="BpkCalendarDate_bpk-calendar-date"]:not([class*="BpkCalendarDate_bpk-calendar-date--outside"])')[(parseInt(day) - 1)].click(); // 16 Agosot
+				document.querySelectorAll('[class*="BpkCalendarDate_bpk-calendar-date"]:not([class*="BpkCalendarDate_bpk-calendar-date--outside"])')[(parseInt(day) - 1)].click();
 			}, day);
 		}
-		// await page.screenshot({ path: 'screen/datepicker.png' });
 	},
 	getRoutesData: async function (page) {
 		await page.waitForSelector('.day-list-item div article.result');

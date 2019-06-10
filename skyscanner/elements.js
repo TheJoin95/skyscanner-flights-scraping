@@ -1,9 +1,32 @@
 module.exports = {
-    common: {},
-    login: {},
-    searchOptions: {},
-    datePicker: {},
-    passengerOptions: {},
+    common: {
+        searchSubmit: 'button[type="submit"]',
+        flexibleDate: '#day-flexible-days-section .fss-fxo-select button:last-child',
+    },
+    login: {
+        signInButton: '#login-button-nav-item button',
+        focusableEmailElement: '[data-testid="login-email-button"]',
+        emailElement: '.js-loginEmailInput',
+        passwordElement: '#password',
+        signinSubmitButton: '[data-testid="login-button"]'
+    },
+    searchOptions: {
+        oneWayButton: '#fsc-trip-type-selector-one-way',
+        returnButton: '#fsc-trip-type-selector-return',
+        directOnlyButton: 'input[name="directOnly"]',
+        originAirport: '#fsc-origin-search',
+        destinationAirport: '#fsc-destination-search',
+    },
+    datePicker: {
+        flightPicker: '[class*="FlightDatepicker"]'
+    },
+    passengerOptions: {
+        popupButton:'[name="class-travellers-trigger"]',
+        popup: '[class*="BpkPopover"]',
+        adultButton: '[class*="BpkPopover"] div [class*="CabinClassTravellersSelector_CabinClassTravellersSelector__nudger-wrapper"]:nth-of-type(1) button:nth-of-type(2)',
+        childrenButton: '[class*="BpkPopover"] div [class*="CabinClassTravellersSelector_CabinClassTravellersSelector__nudger-wrapper"]:nth-of-type(2) button:nth-of-type(2)',
+        passengerSubmitButton: '[class*="BpkPopover_bpk-popover__footer"] button'
+    },
     flightList: {
         results: '.day-list-item div article.result',
         depart: '[class*="LegInfo__leg-depart"]',
